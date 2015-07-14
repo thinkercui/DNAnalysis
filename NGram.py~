@@ -1,0 +1,154 @@
+#n-gram frequency in a text
+from __future__ import division
+import re
+import math
+import copy
+
+
+#get only n-gram frequency
+class NGram(object):
+    def __init__(self,text,n=3):
+        self.length = None
+        self.n = n
+        self.table = {}
+        self.parse_text(text)
+
+    def parse_text(self,text):
+        chars = ' '*self.n
+        #initial sequence of spaces with length n
+        i = 0
+        for letter in ("".join(text.split())):
+            chars = chars[1:] + letter
+            i = i + 1
+            #append letter to sequence of length n
+            if i < self.n:
+                continue
+            self.table[chars] = self.table.get(chars,0) + 1
+            #increment count
+    def print_table(self):
+        for key in self.table.keys():
+            print key,self.table[key]
+
+    def sort_table_key(self):
+        return sorted(self.table.items(),key=lambda d:d[0])
+
+    def sort_table_value(self):
+        return sorted(self.table.items(),key=lambda d:d[1],reverse=True)
+
+#get all the i-gram, i <= n
+def get_within_ngram(string,n):
+    table = {}
+    for i in range(1,n+1):
+        ngram = NGram(string,i)
+        table.update(ngram.table)
+
+    return table
+
+#get word frequency in a text
+def get_word_frequency(filename):
+    f = open(filename,"r")
+    string = f.read()
+    f.close()
+
+    #replace other words rather than english to ' '
+    #all words are lower case already
+    rule = re.compile(r'[^a-zA-Z\']')
+    string = rule.sub(' ',string)
+    string = string.lower()
+
+    #create a list of words separated at white spaces
+    wordlist = string.split(None)
+
+    #create a wordfrequency dictionary
+    #start with an empty dictionary
+    freqDic = {}
+    for word in wordlist:
+        freqDic[word] = freqDic.get(word,0) + 1
+
+    return freqDic
+
+class Entirety(object):
+    def __init__(self,letterdic,worddic,lentotal):
+        self.letterdic = letterdic
+        self.worddic = worddic
+        self.lentotal = lentotal
+        
+    def cal_theory_p(self,word):
+        lp_theory = math.log(1)
+        for letter in word:
+            p_letter = self.letterdic[letter]/self.lentotal
+            lp_letter = math.log(p_letter)
+            lp_theory = lp_theory + lp_letter
+
+        lp_theory = lp_theory + math.log(1/math.factorial(len(word)))
+        return lp_theory
+
+    def cal_real_p(self,word):
+        p_word = self.worddic[word]/self.lentotal
+        lp_real = math.log(p_word)
+
+        return lp_real
+
+    #calculate the Entirety of a word
+    def cal_entirety(self,word):
+
+        return self.cal_real_p(word) - self.cal_theory_p(word)
+         
+    
+#get string from file
+def getfilestr(filename):
+    f = open(filename,"r")
+    string = f.read()
+    f.close()
+
+    rule = re.compile(r'[^a-zA-Z\']')
+    string = rule.sub("",string)
+
+    return string.lower()
+
+#calculate the Entirety of words in a file
+def cal_words_entirety(filename):
+    string = getfilestr(filename)
+    lentotal = len(string)
+    letterdic = NGram(string,1).table
+    worddic = get_word_frequency(filename)
+
+    entirety = Entirety(letterdic,worddic,lentotal)
+    table = copy.deepcopy(worddic)
+    for key in table:
+        table[key] = entirety.cal_entirety(key) + math.log(worddic[key]/lentotal)
+    
+    return table
+
+#calculate the Entirety of n-gram in a file
+def cal_ngram_entirety(filename,n):
+    string = getfilestr(filename)
+    lentotal = len(string)
+    letterdic = NGram(string,1).table
+    worddic = get_within_ngram(string,n)
+
+    entirety = Entirety(letterdic,worddic,lentotal)
+    table = copy.deepcopy(worddic)
+    for key in table:
+        table[key] = entirety.cal_entirety(key) + math.log(worddic[key]/lentotal)
+    
+    return table
+
+#save the dictionary ordered with the value
+def save_dic(dic,filename):
+    f = open(filename,"w")
+    table = sorted(dic.items(),key=lambda d:d[1],reverse=True)
+    for item in table:
+        f.write(str(item[0])+","+str(item[1])+"\n")
+
+    f.close()
+
+
+#dic = cal_words_entirety("test.txt")
+#save_dic(dic,"dic.txt")
+
+ngram = cal_ngram_entirety("test.txt",3)
+save_dic(ngram,"ngram.txt")
+
+
+
