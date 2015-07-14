@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #------------------------------------------------------------------------------------
 #purpose:
@@ -14,8 +15,9 @@ class Entirety(object):
         self.letterdic = letterdic
         self.worddic = worddic
         self.lentotal = lentotal
+        self.meansd = 0
         
-    def cal_theory_p(self,word):
+    def cal_theory_lp(self,word):
         #get the probability of the letters combination in the word 
         p_combination = math.log(1)
         for letter in word:
@@ -40,13 +42,30 @@ class Entirety(object):
         lp_theory = p_combination + p_permutation
         return lp_theory
 
-    def cal_real_p(self,word):
+    def cal_real_lp(self,word):
         p_word = self.worddic[word]/self.lentotal
         lp_real = math.log(p_word)
 
         return lp_real
 
+    def cal_meansq_deviation(self):
+        variance = 0
+        for word in self.worddic:
+            p_real = math.pow(math.e,self.cal_real_lp(word))
+            p_theory = math.pow(math.e,self.cal_theory_lp(word))
+
+            variance = variance + math.pow(p_real - p_theory,2)
+
+        self.meansd = math.sqrt(variance)
+            
+
     #calculate the Entirety of a word
     def cal_entirety(self,word):
-        return self.cal_real_p(word) - self.cal_theory_p(word)
+        #return self.cal_real_lp(word) - self.cal_theory_lp(word)   #this is the entirety of last version
+        p_real = math.pow(math.e,self.cal_real_lp(word))
+        p_theory = math.pow(math.e,self.cal_theory_lp(word))
+        
+        entirety = (p_real - p_theory) / self.meansd
+
+        return entirety
          
